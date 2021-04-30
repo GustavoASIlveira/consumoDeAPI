@@ -1,0 +1,132 @@
+<doctype html>
+<html lang="pt-br">
+<head>
+    <title>Resposta 2</title>
+    <meta charset="UTF-8"/>
+    <script>
+        "use strict";
+        var listaDeps = new Array();
+
+        /* buscarListaDeps
+            Carrega 'listaDeps' com os dados obtidos do recurso paginado,
+            em chamadas sucessivas
+        */
+        function buscarListaDeps (urlInicio) {
+            var corpoResposta;
+            var req = new XMLHttpRequest();
+            var dados;
+
+            req.open ("GET", urlInicio);
+            req.onreadystatechange = function (evt) {
+               if (req.readyState === req.DONE &&
+                    req.status >= 200 && req.status < 300) {
+                    // A requisição foi respondida com sucesso.
+                    corpoResposta = JSON.parse(req.responseText);
+         
+                    listaDeps = listaDeps.concat(corpoResposta.dados);
+
+					
+
+                    // Se houver um link de rel="next" na resposta, chamar a função de busca
+                    // outra vez usando esse link
+                    // VERSÃO COM LOOP FOR
+                    for (var i = 0; i < corpoResposta.links.length; i++) {
+
+                        if (corpoResposta.links[i].rel === "next") {
+                            buscarListaDeps(corpoResposta.links[i].href);
+                            return;
+                        }
+                    }
+
+                    /* VERSÃO USANDO FOREACH
+                    corpoResposta.links.forEach (
+                        function (val, idx, arr) {
+                            if (val.rel === "next") {
+                                buscarListaDeps (val.href);
+                                return;
+                            }
+                        }
+                    );
+                    */
+
+                    menuCarregarOpcoes();
+
+                } // FIM DO "IF"
+            } // FIM DE onreadystatechange
+            req.setRequestHeader ("Accept", "application/json");
+            req.send();
+        }
+
+        buscarListaDeps("https://dadosabertos.camara.leg.br/api/v2/deputados?itens=100");
+
+
+
+        /* menuCarregarOpcoes
+             Configura as opções de nomes de deputados no menu
+         */
+        function menuCarregarOpcoes() {
+            var i=0;
+            var menuwdg = document.getElementById("menudeps");
+            var opt;
+            
+            var partidos = [];
+
+            // Criar o primeiro item sem o nome de um parlamentar...
+            opt = document.createElement("option");
+            opt.text = "Escolha um Partido"
+            menuwdg.add(opt);
+
+			//Seleciona os partidos disponíveis e os armazena no array partidos
+			while(listaDeps[i]){
+				if(partidos.indexOf(listaDeps[i].siglaPartido) < 0){
+					partidos.push(listaDeps[i].siglaPartido);
+				}
+				i++;
+			}
+			
+			for(var i = 0; i < partidos.length; i++){
+				opt = document.createElement("option");
+				opt.text = partidos[i];
+				menuwdg.add(opt);
+			}         
+        }
+
+        /* menuOpcaoEscolhida
+            Chamada quando o usuário escolhe outro nome no menu, executa
+            as alterações na foto e no quadro de informações.
+        */
+        function menuOpcaoEscolhida() {
+			limparTela();
+            var escolhido;
+            var menuwdg = document.getElementById("menudeps");
+
+            escolhido = menuwdg.value;
+            
+            for (var i = 0; i < listaDeps.length; i++) {
+                if (listaDeps[i].siglaPartido === escolhido) {
+                     mostrarDeputado(listaDeps[i]);
+                }
+            }
+        }
+        
+        function mostrarDeputado(dep){
+			var deputado = document.createElement("p");
+				deputado.innerHTML = "Nome: " + dep.nome + " - UF: " + dep.siglaUf + " - Partido: " + dep.siglaPartido + " - email: " + dep.email + "<br /> <hr />";
+				document.body.append(deputado);
+        }
+
+
+		function limparTela(){
+			var elementos = document.querySelectorAll("p");
+			for(var i=0; i < elementos.length; i++){
+				var destruir = elementos[i];
+					destruir.remove();
+			}
+		}
+    </script>
+</head>
+<body>
+    <select id="menudeps" onchange="menuOpcaoEscolhida()"></select><br/>
+
+</body>
+</html>
